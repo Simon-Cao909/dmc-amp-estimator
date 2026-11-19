@@ -1,12 +1,7 @@
 import numpy as np
-import glob
-import pandas as pd
 import copy
 from tensorflow import keras
 import matplotlib.pyplot as plt
-
-from cats.cdataframe import CDataFrame  
-from CDMSDataCatalog import CDMSDataCatalog
 
 from skdeep.regressor import DeepRegressor
 
