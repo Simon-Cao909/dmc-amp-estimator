@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dmc-amp-estimator"
+version = "1.0.0"
+description = "A Python package for predicting the amplitude of missing channels."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "skdeep",
+    "numpy",
+    "pandas",
+    "tensorflow",
+    "matplotlib",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

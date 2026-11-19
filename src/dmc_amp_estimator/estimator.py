@@ -17,21 +17,6 @@ from skdeep.regressor import DeepRegressor
 CHAN_LIST = ('PAS1','PBS1','PCS1','PDS1','PES1','PFS1',
              'PAS2','PBS2','PCS2','PDS2','PES2','PFS2')
 
-RelCal = {
-    'PAS1':1.14,
-    'PBS1':1.076,
-    'PCS1':1.002,
-    'PDS1':0.998,
-    'PES1':1.018,
-    'PFS1':0.935,
-    'PAS2':1.059,
-    'PBS2':1.008,
-    'PCS2':0.931,
-    'PDS2':0.992,
-    'PES2':0.946,
-    'PFS2':0.895
-}
-
 def format_func(df_in,missing_chans,rec):
     df = df_in.copy()
     amps = [c+"OFamps" for c in CHAN_LIST if c not in missing_chans]
@@ -389,81 +374,3 @@ class DMCAmpEstimator:
         return {'truth_vs_pred':truth_pred_plots,
                 'residual':residual_plots,
                 'loss':loss_plot}
-
-    def load_truth(self, sample, rqs=None, dmcqs=None):
-        """
-        Copy and pasted from estimator.py in BasicML
-
-        This function takes in a sample file name, then pulls the DMC (truth) level information and the processed data to output a pandas dataframe with the RQs of interest and true position and energy for the simulation.
-        
-        inputs:
-        [sample] = sample name you are interested in (see https://confluence.slac.stanford.edu/spaces/CDMS/pages/511346640/DMC+Samples+for+CUTE+Analysis+and+Machine+Learning).
-        [rqs] = a list of RQs that exist in processed data. This needs to be used if your obs list for the Estimator includes computed objects that are functions of RQs rather than RQs themselves
-        [dmcqs] = a list of attributes that exist in DMC data. This needs to be used if your rec list for the Estimator includes computed objects that are functions of DMC parameters rather than parameters themselves
-
-        output:
-        [df] = pandas dataframe with the obs and rec parameters for the model 
-        """ 
-        self._validate_missing_chans()
-        self.training_sample = sample # associate the name of the sample with the Estimator object so it can be checked/recreated later
-
-        # Define the list of parameters you want to pull from processed and simulation dataset
-        print("Defining list of params")
-        if rqs == None:
-            rq_list = copy.deepcopy(self.obs)
-            rq_list.append("rqDir/eventTree.EventTriggerID") # list of RQs we want to pull
-        else:
-            rq_list = rqs.append("rqDir/eventTree.EventTriggerID") # list of RQs we want to pull
-        
-        if dmcqs == None:
-            truth_list = copy.deepcopy(self.rec)
-            truth_list.append('EventNum') # list of truth parameters we pull from the simulation
-        else:
-            truth_list = dmcqs.append("EventNum") # list of RQs we want to pull
-       
-        # Define the filepaths used
-        fp = "/project/6049244/share/SimData/DMC_SNOLAB_HV/" ## this is the global file path the DMC data is saved in on compute canada
-        # large samples are split into "runs" which affects the structure of the file path
-        if (sample=='HV100mm_Uniform100eV-12keV_pos50V_V05-09')|(sample=='Ge71_Kshell_pos50V_100kEvents_V05-09'):
-            truth = "/DMCOutput/R*/*.root" ## relevant subfolder for simulation truth
-            proc = "/Processed/R*/Unmerged/*/*.root" ## relevant subfolder for processed data
-        else:
-            truth = "/DMCOutput/*.root" ## relevant subfolder for simulation truth
-            proc = "/Processed/Unmerged/*/*.root" ## relevant subfolder for processed data
-
-        # Get the file names in these folders
-        print("Getting file names")
-        RQ_files = np.sort(glob.glob(fp+sample+proc))
-        truth_files = np.sort(glob.glob(fp+sample+truth))
-        
-        # Construct CDF objects for ease of analysis
-        print("Constructing CDFs")
-        RQs = CDataFrame("rqDir/zip1",RQ_files, friends= [[x+":rqDir/eventTree" for x in RQ_files]]) ## processed data
-        RQs = RQs.Filters(["TriggerType == 1"]) ## only take the physics triggers
-        DMCevent = CDataFrame("G4SimDir/g4dmcHits",truth_files) ## simulation truth
-
-        # Construct the data frames for RQ and Truth info (makes it easier to merge into a single object)
-        try:
-            rq_df = pd.DataFrame(RQs.AsNumpy(rq_list))
-            rq_df = rq_df.rename(columns={'rqDir/eventTree.EventTriggerID': 'TriggerID'})
-        except:
-            print("You've tried to pull an RQ that doesn't exist - check if you need to pass a different list to LoadData")
-            return 0
-
-        print("Getting the truth dfs")
-        try:
-            truth_df = pd.DataFrame(DMCevent.AsNumpy(truth_list))
-            truth_df = truth_df.rename(columns={'EventNum': 'TriggerID'})
-        except:
-            print("You've tried to pull a DMC parameter that doesn't exist - check if you need to pass a different list to LoadData")
-            return 0
-
-        # Construct and return the single dataframe with the info we care about
-        df = pd.merge(rq_df, truth_df, on='TriggerID', how='inner')
-
-        # Apply the relative calibration factors
-        for c in CHAN_LIST:
-            df[c+"OFamps_raw"] = df[c+"OFamps"]
-            df[c+"OFamps"] = df[c+"OFamps"]*RelCal[c]
-
-        return df

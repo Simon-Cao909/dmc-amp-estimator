@@ -1,0 +1,5 @@
+skdeep
+numpy
+pandas
+tensorflow
+matplotlib
