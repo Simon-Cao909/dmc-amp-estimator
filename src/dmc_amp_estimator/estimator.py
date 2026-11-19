@@ -113,7 +113,7 @@ class DMCAmpEstimator:
         if len(self.obs) == 0:
             raise ValueError("You cannot drop every channel!")
 
-    def _build_model(self):
+    def _build_model(self,verbose):
         model = DeepRegressor(model_structure=[
                     {'type':'Dense','units':192,'activation':'relu'},
                     {'type':'Dense','units':192,'activation':'relu'},
@@ -125,7 +125,7 @@ class DMCAmpEstimator:
                 early_stopping=True,
                 n_iter_no_change=self.n_iter_no_change[0],
                 validation_split=0.1,
-                verbose=0,
+                verbose=verbose,
                 loss='mse',
                 optimizer='adam',
                 learning_rate=self.learning_rate[0],
@@ -135,7 +135,7 @@ class DMCAmpEstimator:
 
         return model
 
-    def fit(self,df):
+    def fit(self,df,verbose=1):
         '''
         Trains the regressor on the given dataframe
 
@@ -147,9 +147,14 @@ class DMCAmpEstimator:
             This is generally a DMC dataframe.
 
             If it is a DMC dataframe, make sure you do the rescaling before running this function!
+        
+        verbose : int, default=1
+            Verbosity level.
+
+            Larger values print more fitting information.
         '''
         self._validate_missing_chans()
-        self.regressor_ = self._build_model()
+        self.regressor_ = self._build_model(verbose)
 
         df = format_func(df,self.missing_chans,rec=self.rec)[0]
 
@@ -158,7 +163,7 @@ class DMCAmpEstimator:
 
         self.regressor_.fit(X,y)
 
-    def transfer_learn(self,df):
+    def transfer_learn(self,df,verbose=1):
         '''
         Takes the old model from self.regressor_, 
         freezes the weights and biases of those layers, 
@@ -172,6 +177,11 @@ class DMCAmpEstimator:
             A pandas DataFrame containing c+"OFamps" for every channel.
 
             This is generally a CUTE dataframe.
+        
+        verbose : int, default=1
+            Verbosity level.
+
+            Larger values print more fitting information.
         '''
         self.regressor_._check_is_fitted()
         self.old_regressor_ = copy.deepcopy(self.regressor_)
@@ -196,7 +206,7 @@ class DMCAmpEstimator:
         early_stopping=True,
         n_iter_no_change=self.n_iter_no_change[1],
         validation_split=0.1,
-        verbose=0)
+        verbose=verbose)
 
         df = format_func(df,self.missing_chans,rec=self.rec)[0]
 

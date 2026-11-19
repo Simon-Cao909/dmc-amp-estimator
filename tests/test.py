@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from estimator import DMCAmpEstimator, CHAN_LIST
+from dmc_amp_estimator import DMCAmpEstimator
+from dmc_amp_estimator.estimator import CHAN_LIST
 
 
 # ============================================================
